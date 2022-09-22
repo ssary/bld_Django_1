@@ -1,45 +1,66 @@
-from django.shortcuts import render
+import json
+import os
+import uuid
+
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
-import json,os,uuid
 
 dbPath = os.path.join(os.getcwd(), 'courses/db.json')
-file = open(dbPath)
-courses = json.load(file)
-file.close()
-courses = courses['courses']
 
-class AllCourses(TemplateView):
+
+def ReadCoursesDB():
+    file = open(dbPath)
+    courses = json.load(file)
+    file.close()
+    return courses['courses']
+
+
+def write_courses_db(courses):
+    DictCourses = {"courses": courses}
+    with open(dbPath, "w") as outfile:
+        json.dump(DictCourses, outfile)
+    return DictCourses
+
+
+def BodyData(request):
+    content = None
+    if request.body:
+        content = json.loads(request.body.decode('utf-8'))
+    return content
+
+
+class Courses(TemplateView):
+
     def get(self, request, *args, **kwargs):
+        courses = ReadCoursesDB()
         if len(courses):
             return JsonResponse({'courses': courses})
         else:
             return HttpResponse('Zero courses', status=204)
 
     @csrf_exempt
-    def post (self, request, *args, **kwargs):
-        content = None
-        if request.body:
-            content = json.loads(request.body.decode('utf-8'))
+    def post(self, request, *args, **kwargs):
+
+        courses = ReadCoursesDB()
+        content = BodyData(request)
 
         if content is None:
-            return HttpResponse('You can\'t create course without name and description', status=400)
+            return HttpResponse('You can\'t create course without name and description', status=204)
 
         name = content['name']
         description = content['description']
         course_id = str(uuid.uuid4())
-        courses.append({"id":course_id, "name": name, "description": description})
+        courses.append({"id": course_id, "name": name, "description": description})
 
-        DictCourses = {"courses": courses}
-        with open(dbPath, "w") as outfile:
-            json.dump(DictCourses, outfile)
+        DictCourses = write_courses_db(courses)
         return JsonResponse(DictCourses)
 
 
-class FetchCourse(TemplateView):
+class Course(TemplateView):
 
     def get(self, request, *args, **kwargs):
+        courses = ReadCoursesDB()
         fetchedCourse = None
         for course in courses:
             if str(course['id']) == str(kwargs['course_id']):
@@ -52,10 +73,15 @@ class FetchCourse(TemplateView):
             return JsonResponse(data=fetchedCourse)
 
     @csrf_exempt
-    def put (self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
+        courses = ReadCoursesDB()
+        content = BodyData(request)
 
-        name = request.GET.get('name')
-        description = request.GET.get('description')
+        if content is None:
+            return HttpResponse('You can\'t Update course without name and description', status=204)
+
+        name = content['name']
+        description = content['description']
 
         fetchedCourse = None
         for course in courses:
@@ -70,25 +96,22 @@ class FetchCourse(TemplateView):
         if fetchedCourse is None:
             return HttpResponse('Course is Not found', status=404)
         else:
-            DictCourses = {"courses": courses}
-            with open(dbPath, "w") as outfile:
-                json.dump(DictCourses, outfile)
+            write_courses_db(courses)
             return JsonResponse(fetchedCourse)
 
     @csrf_exempt
     def delete(self, request, *args, **kwargs):
+        courses = ReadCoursesDB()
         UpdatedCourses = []
         isFound = False
         for course in courses:
             if str(course['id']) != str(kwargs['course_id']):
                 UpdatedCourses.append(course)
             else:
-                isFound=True
+                isFound = True
 
         if not isFound:
             return HttpResponse('Course is Not found', status=404)
         else:
-            DictCourses = {"courses": UpdatedCourses}
-            with open(dbPath, "w") as outfile:
-                json.dump(DictCourses, outfile)
+            DictCourses = write_courses_db(UpdatedCourses)
             return JsonResponse(DictCourses)
