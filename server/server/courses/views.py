@@ -2,9 +2,12 @@ import json
 import os
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
+from django import forms
+from .forms import CourseForm, CustomCourseForm
 
 dbPath = os.path.join(os.getcwd(), 'courses/db.json')
 
@@ -30,7 +33,7 @@ def BodyData(request):
     return content
 
 
-class Courses(TemplateView):
+class Courses(TemplateView, forms.Form):
 
     def get(self, request, *args, **kwargs):
         courses = ReadCoursesDB()
@@ -50,11 +53,17 @@ class Courses(TemplateView):
 
         name = content['name']
         description = content['description']
-        course_id = str(uuid.uuid4())
-        courses.append({"id": course_id, "name": name, "description": description})
 
-        DictCourses = write_courses_db(courses)
-        return JsonResponse(DictCourses)
+        courseValidator = CourseForm({"name": name, "description": description})
+        courseCustomValidator = CustomCourseForm({"name": name, "description": description})
+
+        print(courseCustomValidator.is_valid())
+        if courseValidator.is_valid():
+            course_id = str(uuid.uuid4())
+            courses.append({"id": course_id, "name": name, "description": description})
+
+            DictCourses = write_courses_db(courses)
+            return JsonResponse(DictCourses)
 
 
 class Course(TemplateView):
@@ -82,13 +91,14 @@ class Course(TemplateView):
 
         name = content['name']
         description = content['description']
+        courseCustomValidator = CustomCourseForm({"name": name, "description": description})
 
         fetchedCourse = None
         for course in courses:
             if str(course['id']) == str(kwargs['course_id']):
-                if name is not None:
+                if 'name' not in courseCustomValidator.errors.as_data():
                     course['name'] = name
-                if description is not None:
+                if 'description' not in courseCustomValidator.errors.as_data():
                     course['description'] = description
                 fetchedCourse = course
                 break
