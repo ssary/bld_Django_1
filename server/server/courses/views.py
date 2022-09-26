@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 from django import forms
-from .forms import CourseForm, CustomCourseForm
+from .forms import NameForm,DescriptionForm, CustomNameForm, CustomDescriptionForm
 
 dbPath = os.path.join(os.getcwd(), 'courses/db.json')
 
@@ -50,21 +50,26 @@ class Courses(TemplateView, forms.Form):
 
         if content is None:
             return HttpResponse('You can\'t create course without name and description', status=204)
+        name = ''
+        description = ''
+        if 'name' in content:
+            name = content['name']
+        if 'description' in content:
+            description = content['description']
 
-        name = content['name']
-        description = content['description']
+        name_validator = NameForm({"name": name})
+        description_validator = CustomDescriptionForm({"description": description})
 
-        courseValidator = CourseForm({"name": name, "description": description})
-        courseCustomValidator = CustomCourseForm({"name": name, "description": description})
-
-        print(courseCustomValidator.is_valid())
-        if courseValidator.is_valid():
+        if name_validator.is_valid() and description_validator.is_valid():
             course_id = str(uuid.uuid4())
             courses.append({"id": course_id, "name": name, "description": description})
 
             DictCourses = write_courses_db(courses)
             return JsonResponse(DictCourses)
-
+        elif name_validator.is_valid():
+            return HttpResponse(description_validator.errors, status=206)
+        else:
+            return HttpResponse(name_validator.errors, status=206)
 
 class Course(TemplateView):
 
@@ -89,16 +94,21 @@ class Course(TemplateView):
         if content is None:
             return HttpResponse('You can\'t Update course without name and description', status=204)
 
-        name = content['name']
-        description = content['description']
-        courseCustomValidator = CustomCourseForm({"name": name, "description": description})
+        name = ''
+        description = ''
+        if 'name' in content:
+            name = content['name']
+        if 'description' in content:
+            description = content['description']
 
+        name_validator = CustomNameForm({"name": name})
+        description_validator = DescriptionForm({"description": description})
         fetchedCourse = None
         for course in courses:
             if str(course['id']) == str(kwargs['course_id']):
-                if 'name' not in courseCustomValidator.errors.as_data():
+                if name_validator.is_valid():
                     course['name'] = name
-                if 'description' not in courseCustomValidator.errors.as_data():
+                if description_validator.is_valid():
                     course['description'] = description
                 fetchedCourse = course
                 break

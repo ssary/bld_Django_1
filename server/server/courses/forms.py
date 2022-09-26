@@ -16,10 +16,17 @@ def validate_description(value):
         raise ValidationError("the description must be >= 10 chars")
 
 
-class CourseForm(forms.Form):
+class NameForm(forms.Form):
     name = forms.CharField(min_length=3)
+
+
+class DescriptionForm(forms.Form):
     description = forms.CharField(min_length=10)
 
-class CustomCourseForm(forms.Form):
+
+class CustomNameForm(forms.Form):
     name = forms.CharField(validators=[validate_name])
+
+
+class CustomDescriptionForm(forms.Form):
     description = forms.CharField(validators=[validate_description])
