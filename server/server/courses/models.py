@@ -1,3 +1,12 @@
 from django.db import models
 
-# Create your models here.
+
+class Courses(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+
+    def __str__(self):
+        return "name: {} , description: {}".format(self.name, self.description)
+
+    def get_all_objects(self):
+        return self.objects.all()
