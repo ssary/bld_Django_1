@@ -1,43 +1,30 @@
 import json
-import os
-import uuid
 
+from django.core import serializers
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
+
+from .Utils import BodyData, ModelToJson
 from .models import Courses as CoursesModel
-from django.core import serializers
-dbPath = os.path.join(os.getcwd(), 'courses/db.json')
 
 
-def ReadCoursesDB():
+def FetchCourses():
     return list(CoursesModel.objects.values())
-
-
-def BodyData(request):
-    content = None
-    if request.body:
-        content = json.loads(request.body.decode('utf-8'))
-    return content
-
-
-def ModelToJson(model):
-    return json.loads(serializers.serialize('json', [model, ]))[0]['fields']
 
 
 class Courses(TemplateView):
 
     def get(self, request, *args, **kwargs):
-        courses = ReadCoursesDB()
+        courses = FetchCourses()
         if len(courses):
-            return JsonResponse({'courses': courses})
+            return JsonResponse({'courses': courses}, status=200)
         else:
             return HttpResponse('Zero courses', status=204)
 
     @csrf_exempt
     def post(self, request, *args, **kwargs):
 
-        courses = ReadCoursesDB()
         content = BodyData(request)
 
         if content is None:
@@ -48,7 +35,7 @@ class Courses(TemplateView):
         c = CoursesModel(name=name, description=description)
         c.save()
 
-        return JsonResponse(ModelToJson(c))
+        return JsonResponse(ModelToJson(c), status=201)
 
 
 class Course(TemplateView):
@@ -60,7 +47,7 @@ class Course(TemplateView):
         if not fetchedCourse:
             return HttpResponse('Course is Not found', status=404)
         else:
-            return JsonResponse(data=fetchedCourse[0])
+            return JsonResponse(data=fetchedCourse[0], status=200)
 
     @csrf_exempt
     def put(self, request, *args, **kwargs):
@@ -79,7 +66,7 @@ class Course(TemplateView):
             fetchedCourse.name = name
             fetchedCourse.description = description
             fetchedCourse.save()
-            return JsonResponse(ModelToJson(fetchedCourse))
+            return JsonResponse(ModelToJson(fetchedCourse),status=201)
 
     @csrf_exempt
     def delete(self, request, *args, **kwargs):
@@ -89,4 +76,4 @@ class Course(TemplateView):
             return HttpResponse('Course is Not found', status=404)
         else:
             fetchedCourse.delete()
-            return HttpResponse('Course {} deleted'.format(kwargs['course_id']), status=404)
+            return HttpResponse('Course {} deleted'.format(kwargs['course_id']), status=200)

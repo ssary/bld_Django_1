@@ -7,6 +7,3 @@ class Courses(models.Model):
 
     def __str__(self):
         return "name: {} , description: {}".format(self.name, self.description)
-
-    def get_all_objects(self):
-        return self.objects.all()
