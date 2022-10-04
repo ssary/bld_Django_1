@@ -1,9 +1,12 @@
 import json
 
+
 from django.core import serializers
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
+from django import forms
+from .forms import NameForm,DescriptionForm, CustomNameForm, CustomDescriptionForm
 
 from .Utils import BodyData, ModelToJson
 from .models import Courses as CoursesModel
@@ -13,7 +16,7 @@ def FetchCourses():
     return list(CoursesModel.objects.values())
 
 
-class Courses(TemplateView):
+class Courses(TemplateView, forms.Form):
 
     def get(self, request, *args, **kwargs):
         courses = FetchCourses()
@@ -30,13 +33,14 @@ class Courses(TemplateView):
         if content is None:
             return HttpResponse('You can\'t create course without name and description', status=204)
 
+
         name = content['name']
         description = content['description']
         c = CoursesModel(name=name, description=description)
         c.save()
 
         return JsonResponse(ModelToJson(c), status=201)
-
+        
 
 class Course(TemplateView):
 
@@ -51,6 +55,7 @@ class Course(TemplateView):
 
     @csrf_exempt
     def put(self, request, *args, **kwargs):
+
 
         fetchedCourse = CoursesModel.objects.filter(id=kwargs['course_id'])[0]
         content = BodyData(request)
